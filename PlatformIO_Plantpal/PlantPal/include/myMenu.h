@@ -2,27 +2,32 @@
 #define MENU_H
 
 
-
-
-
 #include <WiFi.h>
 #include "esp_wifi.h"
 #include <esp_now.h>
 
 #include <vector>
-
 #include <omegaTFT.h>
-#include <omegaWireless.h>
-#include <omegaNOW.h>
+
 #include "NotoSansMonoSCB20.h"
 #include "NotoSansBold15.h"
+
+#include "omegaPlant.h"
+
+std::vector<omegaPlant> PlantStorage;
+
+
+struct MacAddress
+{
+  uint8_t mac[6];
+};
 
 volatile int gyroy = 0;
 volatile int gyrop = 0;
 volatile int gyror = 0;
 uint8_t *test;
-omegaWireless wirelessManager = omegaWireless("PlantPal");
-EspNowManager espNOW;
+//omegaWireless wirelessManager = omegaWireless("PlantPal");
+//EspNowManager espNOW;
 
  bool espNowActive= false;
 
@@ -35,7 +40,56 @@ TFT_eSprite accessorySprite(&tft);
 
 
 std::vector<MacAddress> connectedMacAddresses;
+
+/*
+  Plant Functions
+
+*/
+
+//Load a Plant Savefile from static memory
+void initializePlantsfromSave(bool force = false){
+
+    // PlantStorage leeren, falls force true ist oder PlantStorage leer ist
+    if (force || PlantStorage.empty()) {
+        PlantStorage.clear();
+        for (size_t i = 0; i < MAX_PLANTS; i++) {
+            PlantStorage.push_back(omegaPlant(i));
+        }
+
+    }
+}
+
+void createPlant(uint8_t id){
+//Error handling here:
+//
+if (PlantStorage.size() >= MAX_PLANTS) {
+    Serial.println("Maximum number of plants reached!");
+    return;
+}
+
+PlantProfile myProfile;
+strcpy(myProfile.name,"Test1");
+PlantStorage.push_back(omegaPlant(PlantProfile));
+
+
+
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
 /*########################################## Menu Functions ##################################################*/
+
+
 
 std::vector<MacAddress> getConnectedMacAddresses() {
     std::vector<MacAddress> macAddresses;
@@ -60,9 +114,10 @@ std::vector<MacAddress> getConnectedMacAddresses() {
         Serial.printf("%02X:%02X:%02X:%02X:%02X:%02X\n",
                       station.mac[0], station.mac[1], station.mac[2],
                       station.mac[3], station.mac[4], station.mac[5]);
-        MacAddress macAddress;
-        memcpy(macAddress.mac, adapterList.sta[i].mac, sizeof(macAddress.mac)); // Copy MAC address
-        macAddresses.push_back(macAddress); // Add MAC address to vector
+        
+        //MacAddress macAddress;
+        //memcpy(macAddress.mac, adapterList.sta[i].mac, sizeof(macAddress.mac)); // Copy MAC address
+        //macAddresses.push_back(macAddress); // Add MAC address to vector
       }
     }
   }
@@ -213,19 +268,19 @@ bool myFunc(TFT_eSprite * funSprite,TFT_eSprite * textSpr,TFT_eSprite * accsrySp
 
 bool startAP(TFT_eSprite * funSprite,TFT_eSprite * textSpr,TFT_eSprite * accsrySprite)
 {
- wirelessManager.startAP();
+ //wirelessManager.startAP();
   return true;
 }
 
 bool getMAC(TFT_eSprite * funSprite,TFT_eSprite * textSpr,TFT_eSprite * accsrySprite)
 {
-  wirelessManager.getConnectedMacAddresses();
+  //wirelessManager.getConnectedMacAddresses();
   return true;
 }
 
 bool stopAP(TFT_eSprite * funSprite,TFT_eSprite * textSpr,TFT_eSprite * accsrySprite)
 {
-  wirelessManager.stopAP();
+  //wirelessManager.stopAP();
   return true;
 }
 
@@ -247,9 +302,9 @@ bool espnowConfig(TFT_eSprite * funSprite,TFT_eSprite * textSpr,TFT_eSprite * ac
   //textSpr-> setCursor(30,0);
   textSpr->println("MAC-Address:");
   textSpr->println(WiFi.macAddress());
-
+/*
   std::vector<MacAddress> list;
-  list = wirelessManager.getLastDevices();
+  //list = wirelessManager.getLastDevices();
 
   for (size_t i = 0; i < list.size(); i++)
   {
@@ -273,9 +328,10 @@ bool espnowConfig(TFT_eSprite * funSprite,TFT_eSprite * textSpr,TFT_eSprite * ac
     if (list.size()>0)
   {
     uint8_t addr[] ={0x48,0x27,0xE2,0x4B,0x35,0x8A};
-  wirelessManager.initESPNOW(true);
-  wirelessManager.sendESPNOW(list[0].mac);  }  
+  //wirelessManager.initESPNOW(true);
+  //wirelessManager.sendESPNOW(list[0].mac);  }  
 
+*/
 /*
 
 
@@ -335,21 +391,18 @@ std::vector<omegaTFT> macMenu(void)
   std::vector<omegaTFT> items;
   items.push_back(omegaTFT(EXIT, "Back",icon_cross));
 
-  std::vector<MacAddress> macList = wirelessManager.getConnectedMacAddresses();
+  //std::vector<MacAddress> macList = wirelessManager.getConnectedMacAddresses();
+  /*
   uint8_t i = 0; 
       for (const MacAddress&mac : macList) {
         items.push_back(omegaTFT(VALUE,"Device:",icon_numeric,macList[i].mac[5]));
         i++;
 
     }
-    
+    */
  return items;
 
 }
-
-
-
-
 
 
 omegaTFT wifiMenu[]{
