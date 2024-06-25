@@ -1,13 +1,7 @@
 {
 	"folders": [
 		{
-			"path": "PlantPal"
-		},
-		{
-			"path": "PotPal"
-		},
-		{
-			"path": "lib"
+			"path": "."
 		}
 	],
 	"settings": {

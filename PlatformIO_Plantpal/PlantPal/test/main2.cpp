@@ -3,8 +3,8 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-#include "omegaMotion/omegaMotion.h"
-#include "omegeMenu/omegaMenu.h"
+#include "omegaMotion.h"
+#include "omegaMenu.h"
 
 #include <freertos/FreeRTOS.h>
 

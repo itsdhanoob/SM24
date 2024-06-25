@@ -1,18 +1,17 @@
 
 #include <freertos/FreeRTOS.h>
-
 #include <TFT_eSPI.h>
 #include <RotaryEncoder.h>
 
+#include "myMenu.h"
 #include "omegaMotion.h"
 #include <omegaTFT.h>
 #include <omegaButton.h>
 
 #include <Wire.h>
 #include <vector>
-#include "myMenu.h"
 
-
+//#include "omegaPlant.h"
 
 
 #ifdef DEBUG_ENABLED
@@ -103,20 +102,22 @@ void dpTask(void * pvParameters)
 
 
     omegaTFT::tft =&tft;
-    omegaTFT::menuSprite = &menuSprite;
-    omegaTFT::valueSprite = &valueSprite;
-    omegaTFT::accsrySprite =&accessorySprite;
+    //omegaTFT::menuSprite = &menuSprite;
+    //omegaTFT::valueSprite = &valueSprite;
+    //omegaTFT::accsrySprite =&accessorySprite;
 
     tft.init();
     tft.setRotation(0);
-    tft.fillScreen(TFT_BLACK);
+    tft.fillScreen(TFT_GOLD);
     
-    menuSprite.loadFont(NotoSansMonoSCB20);
-    valueSprite.loadFont(NotoSansMonoSCB20); 
+
+    //menuSprite.loadFont(NotoSansMonoSCB20);
+    //valueSprite.loadFont(NotoSansMonoSCB20); 
     
-    
+    Serial.println("MainMenu \n");
     myMenu.activateMenu();
     
+    /*
     while (1)
     {   
         
@@ -133,19 +134,12 @@ void dpTask(void * pvParameters)
         
          
     }
-      
+      */
 
 
 
 
 }
-
-void wifiTask(void * params){
-
-
-
-}
-
 
 
 void updateEncoder(){myRotor.tick();}
@@ -160,10 +154,16 @@ void updateSW(){
   };
 
 void setup(void) {
+
+
   Serial.begin(115200);
   Wire.begin();
   
 
+  while (	!Serial)
+  {
+    delay(100);
+  }
   
   // createSprite() buggy in einem Task!!!
   menuSprite.createSprite(240,240);
@@ -193,30 +193,22 @@ void setup(void) {
     xSemaphoreGive(xCalibrationMutex);
     xSemaphoreGive(xSemaphore4tft);
     
-   
-
+    
+    
+    
     xTaskCreate(
         dpTask,      // Function name of the task
         "Display_Task",   // Name of the task (e.g. for debugging)
-        8192,        // Stack size (bytes)
+        10240,        // Stack size (bytes)
         NULL,        // Parameter to pass
         1,           // Task priority
         &dpTaskHandle         // Task handle
     );
-  
+   
     xTaskCreate(
         inputTask,      // Function name of the task
         "Input_Task",   // Name of the task (e.g. for debugging)
-        8192,        // Stack size (bytes)
-        NULL,        // Parameter to pass
-        2,           // Task priority
-        &inputTaskHandle         // Task handle
-    );
-
-      xTaskCreate(
-        inputTask,      // Function name of the task
-        "Input_Task",   // Name of the task (e.g. for debugging)
-        8192,        // Stack size (bytes)
+        2048,        // Stack size (bytes)
         NULL,        // Parameter to pass
         2,           // Task priority
         &inputTaskHandle         // Task handle
