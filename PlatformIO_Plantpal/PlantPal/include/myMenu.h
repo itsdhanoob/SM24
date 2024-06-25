@@ -69,7 +69,7 @@ if (PlantStorage.size() >= MAX_PLANTS) {
 
 PlantProfile myProfile;
 strcpy(myProfile.name,"Test1");
-PlantStorage.push_back(omegaPlant(PlantProfile));
+PlantStorage.push_back(omegaPlant(myProfile));
 
 
 

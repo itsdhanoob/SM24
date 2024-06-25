@@ -133,7 +133,7 @@ omegaPlant::~omegaPlant()
 }
 
 uint8_t omegaPlant::calculateMood(){
-
+/*
         uint8_t mood = 100; // Start with 100% mood
         uint8_t range_temp = 5;
         uint8_t range_hum = 30
@@ -203,6 +203,7 @@ uint8_t omegaPlant::calculateMood(){
         }
 
         return mood; // Mood in percentage (0-100%)
+        */
     } 
 
 uint8_t omegaPlant::calculateLevel(uint32_t exp) {
@@ -227,7 +228,7 @@ bool omegaPlant::saveMyState(uint8_t index){
     PlantSaveData mydata = generateSaveData(this);
     PlantSaveData * data = &mydata; 
     
-    if(!data) return;
+    if(!data) return false;
 
 
     if (index < 0 || index >= MAX_PLANTS) {
