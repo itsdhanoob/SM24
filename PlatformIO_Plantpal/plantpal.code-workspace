@@ -7,9 +7,6 @@
 			"path": "PotPal"
 		},
 		{
-			"path": "../../../../Projekte/ESP32_C3"
-		},
-		{
 			"path": "lib"
 		}
 	],
