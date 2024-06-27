@@ -11,7 +11,9 @@
 #include <Wire.h>
 #include <vector>
 
-//#include "omegaPlant.h"
+#include "mqttManager.h"
+
+#include "omegaPlant.h"
 
 
 #ifdef DEBUG_ENABLED
@@ -34,7 +36,7 @@ volatile int lastCLKstate = 0;
 
 
 TaskHandle_t dpTaskHandle;
-TaskHandle_t gyroTaskHandle;
+TaskHandle_t mqttTaskHandle;
 TaskHandle_t inputTaskHandle;
 TaskHandle_t calibrationTaskHandle;
 TaskHandle_t wifiTaskHandle;
@@ -46,6 +48,7 @@ SemaphoreHandle_t xSemaphore4tft;
 SemaphoreHandle_t xCalibrationMutex;
 SemaphoreHandle_t xWirelessMutex;
 
+//WiFiMQTTManager wifiMQTTManager(ssid, password, mqtt_server, mqtt_user, mqtt_pass, sensor_topic, config_topic);
 omegaButton myButton = omegaButton(PIN_SW);
 RotaryEncoder myRotor = RotaryEncoder( PIN_DT,PIN_CLK, RotaryEncoder::LatchMode::FOUR3);
 
@@ -141,6 +144,22 @@ void dpTask(void * pvParameters)
 
 }
 
+void mqttTask(void * params)
+{
+
+while (1)
+{
+  vTaskDelay(1000);
+}
+
+
+while (1)
+{
+ 
+}
+
+
+}
 
 void updateEncoder(){myRotor.tick();}
 
@@ -158,6 +177,7 @@ void setup(void) {
 
   Serial.begin(115200);
   Wire.begin();
+  delay(1000);
   
 
   while (	!Serial)
@@ -213,6 +233,8 @@ void setup(void) {
         2,           // Task priority
         &inputTaskHandle         // Task handle
     );
+
+
 
 
     
