@@ -5,7 +5,6 @@
 
 #include <nvs.h>
 #include <nvs_flash.h>
-
 /*
     Settings
 */
@@ -28,7 +27,7 @@ enum RCMD{
     TOO_DARK,
     TOO_MOIST,
     TOO_ARID,
-}
+};
 
 
 
@@ -56,7 +55,6 @@ enum Unlockables{
 //Backgrounds    
     ULCK_BG1 = 1 << 14,
     ULCK_BG2 = 1 << 15,
-    
 
     ULCK_ALL = 0xFFFF // 10 bits for 10 items
 };
@@ -69,6 +67,12 @@ struct PlantProfile
     uint8_t hum = 60;
     uint8_t soil_moisture = 50;
     unsigned int light = 10000;
+    
+    uint8_t range_temp = 5;
+    uint8_t range_hum = 30;
+    uint32_t range_light = 100;
+    uint8_t range_soil_moisture = 100;
+
    
 };
 
@@ -111,7 +115,8 @@ private:
 public:
     
     void getMeasurement(sensorData);                    //1. Updates the Plant State 
-    uint8_t calculateMood(sensorData);                  //2. Compairsion to PlantProfile
+    uint8_t calculateMood(sensorData);    
+    void updateMoodHistory(uint8_t);              //2. Compairsion to PlantProfile
     uint8_t calculateXP();                              //3. Decides When to award xp
     uint8_t gainXP(uint8_t);                            //4. Increase current xp and returns it
     uint8_t calculateLevel(uint32_t);                   //5. returns Current level
@@ -178,78 +183,59 @@ void omegaPlant::getMeasurement(sensorData newData){
 
 }
 
-uint8_t omegaPlant::calculateMood(sensorData currentData){
+uint8_t omegaPlant::calculateMood(sensorData currentData) {
+    uint8_t mood = 100; // Start with 100% mood
 
-        uint8_t mood = 100; // Start with 100% mood
-        uint8_t range_temp = 5;
-        uint8_t range_hum = 30
-        uint32_t range_light = 100;
-        uint8_t range_soil_moisture = 100;
+    PlantProfile myProfile = myCurrentState.savedProfile; // Access the current plant profile
+    uint8_t range_temp = myProfile.range_temp;
+    uint8_t range_hum = myProfile.range_hum;
+    uint32_t range_light = myProfile.range_light;
+    uint8_t range_soil_moisture = myProfile.range_soil_moisture;
 
-        // Check Temperature
-        if (currentData.temperature < myProfile.min_tempc - range_temp / 4 || currentData.temperature > myProfile.max_tempc + range_temp / 4)
-        {
-            mood -= 25;
-        }
-        else if (currentData.temperature < myProfile.min_tempc)
-        {
-            mood -= (myProfile.min_tempc - currentData.temperature) * 25 / (range_temp / 4);
-        }
-        else if (currentData.temperature > myProfile.max_tempc)
-        {
-            mood -= (currentData.temperature - myProfile.max_tempc) * 25 / (range_temp / 4);
-        }
+    // Check Temperature
+    if (currentData.temperature < myProfile.tempc - range_temp / 4 || currentData.temperature > myProfile.tempc + range_temp / 4) {
+        mood -= 25;
+    } else if (currentData.temperature < myProfile.tempc) {
+        mood -= (myProfile.tempc - currentData.temperature) * 25 / (range_temp / 4);
+    } else if (currentData.temperature > myProfile.tempc) {
+        mood -= (currentData.temperature - myProfile.tempc) * 25 / (range_temp / 4);
+    }
 
-        // Check Humidity
-        if (currentData.humidity < myProfile.min_hum - range_hum / 4 || currentData.humidity > myProfile.max_hum + range_hum / 4)
-        {
-            mood -= 25;
-        }
-        else if (currentData.humidity < myProfile.min_hum)
-        {
-            mood -= (myProfile.min_hum - currentData.humidity) * 25 / (range_hum / 4);
-        }
-        else if (currentData.humidity > myProfile.max_hum)
-        {
-            mood -= (currentData.humidity - myProfile.max_hum) * 25 / (range_hum / 4);
-        }
+    // Check Humidity
+    if (currentData.humidity < myProfile.hum - range_hum / 4 || currentData.humidity > myProfile.hum + range_hum / 4) {
+        mood -= 25;
+    } else if (currentData.humidity < myProfile.hum) {
+        mood -= (myProfile.hum - currentData.humidity) * 25 / (range_hum / 4);
+    } else if (currentData.humidity > myProfile.hum) {
+        mood -= (currentData.humidity - myProfile.hum) * 25 / (range_hum / 4);
+    }
 
-        // Check Light
-        if (currentData.lightIntensity < myProfile.min_light - range_light / 4 || currentData.lightIntensity > myProfile.max_light + range_light / 4)
-        {
-            mood -= 25;
-        }
-        else if (currentData.lightIntensity < myProfile.min_light)
-        {
-            mood -= (myProfile.min_light - currentData.lightIntensity) * 25 / (range_light / 4);
-        }
-        else if (currentData.lightIntensity > myProfile.max_light)
-        {
-            mood -= (currentData.lightIntensity - myProfile.max_light) * 25 / (range_light / 4);
-        }
+    // Check Light
+    if (currentData.lightIntensity < myProfile.light - range_light / 4 || currentData.lightIntensity > myProfile.light + range_light / 4) {
+        mood -= 25;
+    } else if (currentData.lightIntensity < myProfile.light) {
+        mood -= (myProfile.light - currentData.lightIntensity) * 25 / (range_light / 4);
+    } else if (currentData.lightIntensity > myProfile.light) {
+        mood -= (currentData.lightIntensity - myProfile.light) * 25 / (range_light / 4);
+    }
 
-        // Check Soil Moisture
-        if (currentData.moisture < myProfile.min_soil_moisture - range_soil_moisture / 4 || currentData.moisture > myProfile.max_soil_moisture + range_soil_moisture / 4)
-        {
-            mood -= 25;
-        }
-        else if (currentData.moisture < myProfile.min_soil_moisture)
-        {
-            mood -= (myProfile.min_soil_moisture - currentData.moisture) * 25 / (range_soil_moisture / 4);
-        }
-        else if (currentData.moisture > myProfile.max_soil_moisture)
-        {
-            mood -= (currentData.moisture - myProfile.max_soil_moisture) * 25 / (range_soil_moisture / 4);
-        }
+    // Check Soil Moisture
+    if (currentData.moisture < myProfile.soil_moisture - range_soil_moisture / 4 || currentData.moisture > myProfile.soil_moisture + range_soil_moisture / 4) {
+        mood -= 25;
+    } else if (currentData.moisture < myProfile.soil_moisture) {
+        mood -= (myProfile.soil_moisture - currentData.moisture) * 25 / (range_soil_moisture / 4);
+    } else if (currentData.moisture > myProfile.soil_moisture) {
+        mood -= (currentData.moisture - myProfile.soil_moisture) * 25 / (range_soil_moisture / 4);
+    }
 
-        // Ensure mood is not less than 0
-        if (mood > 100) // Checking for overflow case
-        {
-            mood = 0;
-        }
+    // Ensure mood is not less than 0
+    if (mood < 0) {
+        mood = 0;
+    }
 
-        return mood; // Mood in percentage (0-100%)
-    } 
+    return mood; // Mood in percentage (0-100%)
+}
+
 
 void omegaPlant::updateMoodHistory(uint8_t newMood) {
   static uint8_t moodHistorySize;
@@ -266,7 +252,7 @@ void omegaPlant::updateMoodHistory(uint8_t newMood) {
 
 uint8_t omegaPlant::calculateLevel(uint32_t exp) {
     uint8_t level = 1;
-    uint32_t exp_needed = base_exp;
+    uint32_t exp_needed = 2;
 
     while (exp >= exp_needed) {
         exp -= exp_needed;
@@ -277,34 +263,58 @@ uint8_t omegaPlant::calculateLevel(uint32_t exp) {
     return level;
 }
 
-uint8_t omegaPlant::getRCMD(sensorData newData){
+uint8_t omegaPlant::getRCMD(sensorData newData) {
+    // Access the current plant profile
+    PlantProfile myProfile = myCurrentState.savedProfile;
 
-        // Check temperature
-    if (newData.temperature < myProfile.min_tempc)
-        return TOO_COLD;
-    if (newData.temperature > myProfile.max_tempc)
-        return TOO_HOT;
+    // Initialize the deviation values
+    int8_t tempDeviation = 0;
+    int8_t humDeviation = 0;
+    int8_t moistureDeviation = 0;
+    int8_t lightDeviation = 0;
+
+    // Check temperature
+    if (newData.temperature < myProfile.tempc - myProfile.range_temp / 2) {
+        tempDeviation = myProfile.tempc - newData.temperature;
+    } else if (newData.temperature > myProfile.tempc + myProfile.range_temp / 2) {
+        tempDeviation = newData.temperature - myProfile.tempc;
+    }
 
     // Check humidity
-    if (newData.humidity < myProfile.min_hum)
-        return TOO_DRY;
-    if (newData.humidity > myProfile.max_hum)
-        return TOO_HUMID;
+    if (newData.humidity < myProfile.hum - myProfile.range_hum / 2) {
+        humDeviation = myProfile.hum - newData.humidity;
+    } else if (newData.humidity > myProfile.hum + myProfile.range_hum / 2) {
+        humDeviation = newData.humidity - myProfile.hum;
+    }
 
     // Check soil moisture
-    if (newData.moisture < myProfile.min_soil_moisture)
-        return TOO_ARID;
-    if (newData.moisture > myProfile.max_soil_moisture)
-        return TOO_MOIST;
+    if (newData.moisture < myProfile.soil_moisture - myProfile.range_soil_moisture / 2) {
+        moistureDeviation = myProfile.soil_moisture - newData.moisture;
+    } else if (newData.moisture > myProfile.soil_moisture + myProfile.range_soil_moisture / 2) {
+        moistureDeviation = newData.moisture - myProfile.soil_moisture;
+    }
 
     // Check light intensity
-    if (newData.lightIntensity < myProfile.min_light)
-        return TOO_DARK;
-    if (newData.lightIntensity > myProfile.max_light)
-        return TOO_SUNNY;
+    if (newData.lightIntensity < myProfile.light - myProfile.range_light / 2) {
+        lightDeviation = myProfile.light - newData.lightIntensity;
+    } else if (newData.lightIntensity > myProfile.light + myProfile.range_light / 2) {
+        lightDeviation = newData.lightIntensity - myProfile.light;
+    }
 
-    // If all conditions are within optimal ranges
-    return ALL_FINE;
+    int8_t maxDeviation = std::max({abs(tempDeviation), abs(humDeviation), abs(moistureDeviation), abs(lightDeviation)});
+    uint8_t recommendation = ALL_FINE;
+
+    if (maxDeviation == abs(tempDeviation)) {
+        recommendation = (tempDeviation > 0) ? TOO_HOT : TOO_COLD;
+    } else if (maxDeviation == abs(humDeviation)) {
+        recommendation = (humDeviation > 0) ? TOO_HUMID : TOO_DRY;
+    } else if (maxDeviation == abs(moistureDeviation)) {
+        recommendation = (moistureDeviation > 0) ? TOO_MOIST : TOO_ARID;
+    } else if (maxDeviation == abs(lightDeviation)) {
+        recommendation = (lightDeviation > 0) ? TOO_SUNNY : TOO_DARK;
+    }
+
+    return recommendation;
 }
 
 
@@ -354,7 +364,7 @@ bool omegaPlant::saveMyState(uint8_t index){
     PlantSaveData mydata = generateSaveData(this);
     PlantSaveData * data = &mydata; 
     
-    if(!data) return;
+    if(!data) return false;
 
 
     if (index < 0 || index >= MAX_PLANTS) {

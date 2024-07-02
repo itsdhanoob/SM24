@@ -15,6 +15,7 @@
 
 #include "WiFi.h"
 
+
 #ifdef DEBUG_ENABLED
   #define DEBUG_PRINT(message) Serial.print(message)
   #define DEBUG_PRINTLN(message) Serial.println(message)
