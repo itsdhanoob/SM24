@@ -1,18 +1,19 @@
 
 #include <freertos/FreeRTOS.h>
+
 #include <TFT_eSPI.h>
 #include <RotaryEncoder.h>
 
-#include "myMenu.h"
 #include "omegaMotion.h"
 #include <omegaTFT.h>
 #include <omegaButton.h>
 
 #include <Wire.h>
 #include <vector>
+#include "myMenu.h"
+#include "mqttManager.h"
 
-//#include "omegaPlant.h"
-
+#include "WiFi.h"
 
 #ifdef DEBUG_ENABLED
   #define DEBUG_PRINT(message) Serial.print(message)
@@ -33,14 +34,13 @@ volatile int lastCLKstate = 0;
 
 
 
+
 TaskHandle_t dpTaskHandle;
 TaskHandle_t gyroTaskHandle;
 TaskHandle_t inputTaskHandle;
-TaskHandle_t calibrationTaskHandle;
 TaskHandle_t wifiTaskHandle;
        // Include the graphics library
 
-omegaMotion myMPU = omegaMotion();
 
 SemaphoreHandle_t xSemaphore4tft;
 SemaphoreHandle_t xCalibrationMutex;
@@ -102,22 +102,18 @@ void dpTask(void * pvParameters)
 
 
     omegaTFT::tft =&tft;
-    //omegaTFT::menuSprite = &menuSprite;
-    //omegaTFT::valueSprite = &valueSprite;
-    //omegaTFT::accsrySprite =&accessorySprite;
+    omegaTFT::menuSprite = &menuSprite;
+
 
     tft.init();
     tft.setRotation(0);
-    tft.fillScreen(TFT_GOLD);
+    tft.fillScreen(TFT_BLACK);
     
+    menuSprite.loadFont(NotoSansMonoSCB20);
 
-    //menuSprite.loadFont(NotoSansMonoSCB20);
-    //valueSprite.loadFont(NotoSansMonoSCB20); 
     
-    Serial.println("MainMenu \n");
     myMenu.activateMenu();
     
-    /*
     while (1)
     {   
         
@@ -134,11 +130,34 @@ void dpTask(void * pvParameters)
         
          
     }
-      */
+      
 
 
 
 
+}
+
+void wifiTask(void * params){
+  vTaskDelay(500);
+  //wifiMQTTManager.setup();
+  setup_wifi();
+  delay(200);
+  client.setServer(mqtt_server, 1883);
+  vTaskDelay(200);
+  while (1)
+  {
+     if (!client.connected()) {
+    reconnect();
+  }
+  client.loop();
+  vTaskDelay(20);
+  // Publish sensor data every 10 seconds
+
+  
+
+
+
+}
 }
 
 
@@ -154,21 +173,21 @@ void updateSW(){
   };
 
 void setup(void) {
-
-
   Serial.begin(115200);
   Wire.begin();
   
-
-  while (	!Serial)
+  while (!Serial)
   {
     delay(100);
   }
   
+
+//WiFi.begin(ssid,password);
   // createSprite() buggy in einem Task!!!
   menuSprite.createSprite(240,240);
-  valueSprite.createSprite(SCREEN_WIDTH-60,SCREEN_HEIGHT/2);
-  accessorySprite.createSprite(120,120);
+
+
+
 
     
     //i2cWire.begin();
@@ -193,18 +212,17 @@ void setup(void) {
     xSemaphoreGive(xCalibrationMutex);
     xSemaphoreGive(xSemaphore4tft);
     
-    
-    
-    
+   
+
     xTaskCreate(
         dpTask,      // Function name of the task
         "Display_Task",   // Name of the task (e.g. for debugging)
-        10240,        // Stack size (bytes)
+        8192,        // Stack size (bytes)
         NULL,        // Parameter to pass
-        1,           // Task priority
+        2,           // Task priority
         &dpTaskHandle         // Task handle
     );
-   
+  
     xTaskCreate(
         inputTask,      // Function name of the task
         "Input_Task",   // Name of the task (e.g. for debugging)
@@ -214,6 +232,14 @@ void setup(void) {
         &inputTaskHandle         // Task handle
     );
 
+      xTaskCreate(
+        wifiTask,      // Function name of the task
+        "Wifi_Task",   // Name of the task (e.g. for debugging)
+        20000,        // Stack size (bytes)
+        NULL,        // Parameter to pass
+        1,           // Task priority
+        &wifiTaskHandle         // Task handle
+    );
 
     
 

@@ -18,7 +18,17 @@
 */
 
 
-
+enum RCMD{
+    ALL_FINE = 0,
+    TOO_HOT,
+    TOO_COLD,
+    TOO_HUMID,
+    TOO_DRY,
+    TOO_SUNNY,
+    TOO_DARK,
+    TOO_MOIST,
+    TOO_ARID,
+}
 
 
 
@@ -58,9 +68,8 @@ struct PlantProfile
     uint8_t tempc =22;
     uint8_t hum = 60;
     uint8_t soil_moisture = 50;
-    
     unsigned int light = 10000;
-    uint8_t light_duration = 12; // Desired light duration in hours
+   
 };
 
 struct sensorData{
@@ -69,6 +78,8 @@ struct sensorData{
     uint8_t moisture;
     uint8_t lightIntensity;
 };
+
+
 
 
 struct PlantSaveData{
@@ -88,6 +99,7 @@ private:
     PlantSaveData myCurrentState;
 
     sensorData lastData[MEASUREMENT_PER_XP_GAIN]; // Save The last Day
+    uint8_t moodHistory[MEASUREMENT_PER_XP_GAIN];
     sensorData currentData;
     
     uint8_t plantID; // Memory Location id for managing savestates
@@ -99,11 +111,12 @@ private:
 public:
     
     void getMeasurement(sensorData);                    //1. Updates the Plant State 
-    uint8_t calculateMood();                            //2. Compairsion to PlantProfile
-    uint8_t calculateXP(sensorData*, uint8_t);          //3. Decides When to award xp
+    uint8_t calculateMood(sensorData);                  //2. Compairsion to PlantProfile
+    uint8_t calculateXP();                              //3. Decides When to award xp
     uint8_t gainXP(uint8_t);                            //4. Increase current xp and returns it
     uint8_t calculateLevel(uint32_t);                   //5. returns Current level
     bool isLevelUp();                                      //Checks current xp. if level up availabe set new level and returns true
+    uint8_t getRCMD(sensorData);                        //Returns a reccomendations based on current sensor data
 
     PlantSaveData generateSaveData(omegaPlant*);         //Generate save file for current instance
     bool saveMyState(uint8_t);                      //Writes the SafeData into memory
@@ -132,7 +145,40 @@ omegaPlant::~omegaPlant()
 {
 }
 
-uint8_t omegaPlant::calculateMood(){
+void omegaPlant::getMeasurement(sensorData newData){
+    static int measureCounter =0;
+    uint8_t rcmnd =0;
+
+    measureCounter++;
+
+    uint8_t newMood = calculateMood(newData);
+    updateMoodHistory(newMood);
+
+    if (newMood<90)
+    {   
+        // Calculate Recommendations
+        rcmnd = getRCMD(newData);
+
+    }
+
+    if (measureCounter%MEASUREMENT_PER_XP_GAIN == 0)
+    {
+        uint8_t rewardedXP = calculateXP();
+        
+        uint32_t currentXP = gainXP(rewardedXP);
+        uint8_t currentLevel = calculateLevel(currentXP);
+        
+        // On LevelUP
+        if(isLevelUp()){
+            //Unlock stuff;
+
+        
+        } 
+    }
+
+}
+
+uint8_t omegaPlant::calculateMood(sensorData currentData){
 
         uint8_t mood = 100; // Start with 100% mood
         uint8_t range_temp = 5;
@@ -205,22 +251,103 @@ uint8_t omegaPlant::calculateMood(){
         return mood; // Mood in percentage (0-100%)
     } 
 
-uint8_t omegaPlant::calculateLevel(uint32_t exp) {
-    const uint32_t base_exp = 100; // Basiszahl für die benötigte EXP
-    const float exponent = 1.5; // Exponent für die Kurve
+void omegaPlant::updateMoodHistory(uint8_t newMood) {
+  static uint8_t moodHistorySize;
+  if (moodHistorySize < MEASUREMENT_PER_XP_GAIN) {
+        moodHistory[moodHistorySize++] = newMood;
+    } else {
+        // Shift the history array to the left and add the new mood at the end
+        for (uint8_t i = 1; i < MEASUREMENT_PER_XP_GAIN; ++i) {
+            moodHistory[i - 1] = moodHistory[i];
+        }
+        moodHistory[MEASUREMENT_PER_XP_GAIN - 1] = newMood;
+    }
+}
 
+uint8_t omegaPlant::calculateLevel(uint32_t exp) {
     uint8_t level = 1;
     uint32_t exp_needed = base_exp;
 
     while (exp >= exp_needed) {
         exp -= exp_needed;
         level++;
-        exp_needed = base_exp * pow(level, exponent); // Berechne die benötigte EXP für das nächste Level
+        exp_needed = 2*level;
     }
 
     return level;
 }
 
+uint8_t omegaPlant::getRCMD(sensorData newData){
+
+        // Check temperature
+    if (newData.temperature < myProfile.min_tempc)
+        return TOO_COLD;
+    if (newData.temperature > myProfile.max_tempc)
+        return TOO_HOT;
+
+    // Check humidity
+    if (newData.humidity < myProfile.min_hum)
+        return TOO_DRY;
+    if (newData.humidity > myProfile.max_hum)
+        return TOO_HUMID;
+
+    // Check soil moisture
+    if (newData.moisture < myProfile.min_soil_moisture)
+        return TOO_ARID;
+    if (newData.moisture > myProfile.max_soil_moisture)
+        return TOO_MOIST;
+
+    // Check light intensity
+    if (newData.lightIntensity < myProfile.min_light)
+        return TOO_DARK;
+    if (newData.lightIntensity > myProfile.max_light)
+        return TOO_SUNNY;
+
+    // If all conditions are within optimal ranges
+    return ALL_FINE;
+}
+
+
+uint8_t omegaPlant::calculateXP(){
+    uint8_t baseXP = 3;
+    uint16_t accMood = 0;
+
+    for (size_t i = 0; i < MEASUREMENT_PER_XP_GAIN; i++)
+    {
+        accMood+=moodHistory[i];
+    }
+
+    return baseXP * (accMood/MEASUREMENT_PER_XP_GAIN)/100;
+
+}
+
+uint8_t omegaPlant::gainXP(uint8_t gainedXP){
+    myCurrentState.savedExp += gainedXP;
+
+    return myCurrentState.savedExp;
+
+}
+
+bool omegaPlant::isLevelUp(){
+    
+
+    static uint8_t level = 0;
+
+    uint8_t newLevel = calculateLevel(myCurrentState.savedExp);
+
+    if (newLevel > level){
+    
+        level = newLevel;
+        return true;
+    }
+    else{
+        level = newLevel;
+      return false;   
+    }
+
+ 
+
+}   
 
 bool omegaPlant::saveMyState(uint8_t index){
     
