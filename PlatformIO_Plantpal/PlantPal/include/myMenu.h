@@ -22,8 +22,9 @@ volatile int gyror = 0;
 uint8_t *test;
 omegaWireless wirelessManager = omegaWireless("PlantPal");
 EspNowManager espNOW;
+PlantProfile newProfile; 
 
-omegaPlant myPlant;
+omegaPlant myPlant = omegaPlant(newProfile);
 
 extern sensorDataPacket curData;
 
