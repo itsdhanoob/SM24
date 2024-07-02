@@ -35,7 +35,7 @@ public:
     static TFT_eSprite * accsrySprite ;
     bool forceDraw = true;
 
-    typedef bool (*externalFunction)(TFT_eSprite *,TFT_eSprite *, TFT_eSprite*);
+    typedef bool (*externalFunction)(TFT_eSPI *,TFT_eSprite *);
     typedef std::vector<omegaTFT>(*extMenu)(void);
 private:
     
@@ -446,7 +446,7 @@ oldIndex = selectedItem;
     {
         if(function)
         {
-            if(function(menuSprite,valueSprite, accsrySprite))exitMenu();
+            if(function(tft,menuSprite))exitMenu();
         }
         
     }

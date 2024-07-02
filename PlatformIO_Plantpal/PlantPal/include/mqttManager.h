@@ -1,3 +1,6 @@
+#ifndef MQTT_MANAGER_H
+#define MQTT_MANAGER_H
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
@@ -16,16 +19,29 @@ const char *password = "49937025"; // Replace with your Wi-Fi password
 const char *mqtt_server = "192.168.2.5";
 const char *mqtt_user = "containership";
 const char *mqtt_pass = MQTT_PASSWORD;
-const char *sensor_topic = "plantpal/sensor/1";
-const char *config_topic = "plantpal/config/1";
+
+const char *alive_topic = "plantpal/alive/#";
+const char *sensor_topic = "plantpal/sensors/#";
+const char *config_topic = "plantpal/config/#";
 
 WiFiClient espClient;
 PubSubClient client(espClient);
 
+
+
+typedef struct sensorDataPacket{
+    uint16_t id;
+    uint8_t tempc;
+    uint8_t hum;
+    uint8_t light;
+    uint8_t moist;
+
+};
+
+sensorDataPacket curData;
+
 void setup_wifi() {
-  delay(10);
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, LOW);
+
 
   // Start connecting to Wi-Fi
   WiFi.begin(ssid, password);
@@ -34,13 +50,13 @@ void setup_wifi() {
   while (WiFi.status() != WL_CONNECTED && counter < 5000) {
     counter++;
     if (counter % 10 == 0) {
-      digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+     
     }
     delay(1);
   }
 
   if (WiFi.status() == WL_CONNECTED) {
-    digitalWrite(LED_PIN, HIGH);
+
     Serial.println("");
     Serial.println("WiFi connected");
     Serial.println("IP address: ");
@@ -57,10 +73,12 @@ void reconnect() {
     // Attempt to connect
     if (client.connect("ESP32Client", mqtt_user, mqtt_pass)) {
       Serial.println("connected");
+      delay(1000);
       // Once connected, publish an "alive" message
-      client.publish("plantpal/alive/1", "Potpal is alive");
+      client.publish(alive_topic, "PlantPal is alive");
       // Subscribe to the configuration topic
       client.subscribe(config_topic);
+      client.subscribe(sensor_topic);
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -71,18 +89,7 @@ void reconnect() {
   }
 }
 
-void setup() {
-  delay(1000);
-  Serial.begin(115200);
-  delay(1000);
 
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-
-  setup_wifi();
-  client.setServer(mqtt_server, 1883);
-}
 
 void publishSensorData() {
   StaticJsonDocument<256> doc;
@@ -93,7 +100,7 @@ void publishSensorData() {
   doc["id"] = id;
   doc["temperature"] = round(temperature);
   doc["humidity"] = round(humidity);
-  doc["soilMoisture"] = soilMoisture;
+  doc["soilmoisture"] = soilMoisture;
   doc["freeHeap"] = esp_get_free_heap_size();
   
 
@@ -104,7 +111,7 @@ void publishSensorData() {
 }
 
 void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.print("Message arrived [");
+ /* Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
   for (unsigned int i = 0; i < length; i++) {
@@ -112,18 +119,21 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
   Serial.println();
   // Handle the configuration message if needed
-}
+ StaticJsonDocument<256> doc;
+        DeserializationError error = deserializeJson(doc, payload, length);
+        if (error) {
+            Serial.print("deserializeJson() failed: ");
+            Serial.println(error.f_str());
+            return;
+        }
 
-void loop() {
-  if (!client.connected()) {
-    reconnect();
-  }
-  client.loop();
+        // Example: Extract values from the parsed JSON document
+        if (doc.containsKey("id")) {
+            curData.id = doc["command"].as<uint16_t>();
+        }
 
-  // Publish sensor data every 10 seconds
-  static unsigned long lastPublishTime = 0;
-  if (millis() - lastPublishTime > 10000) {
-    publishSensorData();
-    lastPublishTime = millis();
-  }
+
+
+*/
 }
+#endif
